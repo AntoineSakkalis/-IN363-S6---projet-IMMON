@@ -6,8 +6,8 @@ public class Trame_message extends Trame{
 	private String client_source;
 	private String du;
 	
-	public Trame_message(int type_message, String serveur_cible, String serveur_source, String client_cible, String client_source, String du) {
-		super(type_message, serveur_cible, serveur_source);
+	public Trame_message(String serveur_cible, String serveur_source, String client_cible, String client_source, String du) {
+		super(2, serveur_cible, serveur_source);
 		this.setClient_cible(client_cible);
 		this.setClient_source(client_source);
 		this.setDu(du);

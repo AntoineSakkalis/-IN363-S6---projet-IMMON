@@ -6,13 +6,13 @@ import common.Link;
 import common.Trame;
 import common.Trame_message;
 
-public class ClientHandler {
+public class GatewayHandler {
 
 	private Thread clientThread;
 	private Server serverAttached;
 	private Link link;
 
-	public ClientHandler(Link link, Server server) throws IOException {
+	public GatewayHandler(Link link, Server server) throws IOException {
 		this.link = link;
 		this.serverAttached = server;
 		this.clientThread = new Thread(() -> {
@@ -21,9 +21,9 @@ public class ClientHandler {
 				try {
 					Trame trame = link.receive();
 					if (trame != null) {
-						// Si c'est bien un message
+						// Si c'est un message
 						if (trame.getType_message() == 2) {
-							clientMessageReceived((Trame_message) trame);
+							serverMessageReceived((Trame_message) trame);
 						} else {
 							throw new RuntimeException("Type de trame reçu non valide");
 						}
@@ -37,8 +37,8 @@ public class ClientHandler {
 	}
 
 	// traite les messages entrants
-	public void clientMessageReceived(Trame_message received) throws IOException {
-		System.out.println("Received Trame_message from " + received.getClient_source());
+	public void serverMessageReceived(Trame_message received) throws IOException {
+		System.out.println("Received Trame_message from " + link.getSocket().getInetAddress().toString());
 		// Si le client est sur le serveur local
 		if (received.getServeur_cible().compareTo(this.serverAttached.id) == 0) {
 			serverAttached.sendTrameMessageLocally(received);
@@ -47,7 +47,7 @@ public class ClientHandler {
 			serverAttached.sendTrameMessageExternaly(received);
 		}
 	}
-	
+
 	public Link getLink() {
 		return link;
 	}

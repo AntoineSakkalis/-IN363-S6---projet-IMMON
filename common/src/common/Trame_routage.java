@@ -4,16 +4,17 @@ import java.net.Inet4Address;
 import java.util.ArrayList;
 
 public class Trame_routage extends Trame{
-	
+
+	private static final long serialVersionUID = 676075719237501826L;
 	private ArrayList<String> serveurs;
 	private ArrayList<Inet4Address> passerelles;
 	private ArrayList<ArrayList<String>> clients_serveurs;	
 	private ArrayList<Integer> distance;
 	
-	Trame_routage(int type_message, String serveur_cible,
+	Trame_routage(String serveur_cible,
 			String serveur_source, ArrayList<String> serveurs, ArrayList<Inet4Address> passerelles, ArrayList<ArrayList<String>> clients_serveurs, ArrayList<Integer> distance) {
 		
-		super(type_message, serveur_cible, serveur_source);
+		super(1, serveur_cible, serveur_source);
 		this.setServeurs(serveurs);
 		this.setPasserelles(passerelles);
 		this.setClients_serveurs(clients_serveurs);

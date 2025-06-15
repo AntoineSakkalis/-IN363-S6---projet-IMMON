@@ -2,13 +2,14 @@ package common;
 
 import java.io.*;
 import java.net.*;
+import java.net.Inet4Address;
 
 public class Link implements AutoCloseable {
 	private Socket socket;
 	private ObjectOutputStream out;
 	private ObjectInputStream in;
 
-	public Link(String ip, int port) throws IOException {
+	public Link(Inet4Address ip, int port) throws IOException {
 		this.socket = new Socket(ip, port);
 		this.out = new ObjectOutputStream(socket.getOutputStream());
 		this.out.flush(); // flush to ensure the stream header is sent
