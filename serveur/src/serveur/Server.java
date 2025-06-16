@@ -46,7 +46,7 @@ public class Server {
 		
 		Inet4Address gateway;
 		try {
-		    gateway = (Inet4Address) InetAddress.getByName("127.0.0.1");
+		    gateway = (Inet4Address) InetAddress.getByName("192.168.127.183");
 		} catch (UnknownHostException e) {
 		    e.printStackTrace();
 		    return;

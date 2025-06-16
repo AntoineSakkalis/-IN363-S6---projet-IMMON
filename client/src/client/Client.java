@@ -180,8 +180,8 @@ public class Client {
                 Trame_message trameMessage = new Trame_message(
                     null,
                     this.serverToConnect,
-                    this.name,
                     chatClient,
+                    this.name,
                     message
                 );
                 link.send(trameMessage);

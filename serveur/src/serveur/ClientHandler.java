@@ -46,7 +46,7 @@ public class ClientHandler {
 	public void clientMessageReceived(Trame_message received) throws IOException {
 		System.out.println("Received Trame_message from " + received.getClient_source());
 		//ajout du serveur cible si trouvé, sinon le message n'est pas transmis
-		if(serverAttached.searchServerOfClient(received.getClient_cible()) == null) {
+		if(serverAttached.searchServerOfClient(received.getClient_cible()) != null) {
 		
 			received.setServeur_cible(serverAttached.searchServerOfClient(received.getClient_cible()));
 		
