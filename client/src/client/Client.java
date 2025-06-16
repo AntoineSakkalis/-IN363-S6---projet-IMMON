@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 import common.Link;
@@ -14,7 +15,7 @@ import common.Trame_message;
 
 public class Client {
 
-    private String name = "C2";
+    private String name = "C1";
     private int port = 9081;
     private String serverToConnect = "S01";
     private Inet4Address ipGateway;
@@ -31,14 +32,17 @@ public class Client {
     }
 
     public Client() {
+    	
+        Scanner scanner = new Scanner(System.in);
+    	System.out.println("Choisissez votre nom sur le réseau");
+    	this.name = scanner.nextLine();
+    	
         try {
             ipGateway = (Inet4Address) InetAddress.getByName("127.0.0.1");
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-        Scanner scanner = new Scanner(System.in);
-    	System.out.println("Choisissez votre nom sur le réseau");
-    	String name = scanner.nextLine();
+
     	
         runClient();
     }
@@ -99,7 +103,7 @@ public class Client {
                 }
             } catch (IOException e) {
                 if (running) {
-                    System.out.println("Connection perdue");
+                    System.out.println("Connexion perdue");
                     running = false;
                 }
             }
@@ -141,7 +145,7 @@ public class Client {
 
     private void requestClientList() {
         try {
-            Trame_getClients getClients = new Trame_getClients("C2","C2",null, null);
+            Trame_getClients getClients = new Trame_getClients(null, this.serverToConnect, this.name, new ArrayList<String>());
             link.send(getClients);
         } catch (IOException e) {
             System.out.println("échec de récupération des clients " + e.getMessage());
@@ -174,9 +178,9 @@ public class Client {
             // Send chat message
             try {
                 Trame_message trameMessage = new Trame_message(
-                    serverToConnect,
-                    serverToConnect,
-                    name,
+                    null,
+                    this.serverToConnect,
+                    this.name,
                     chatClient,
                     message
                 );

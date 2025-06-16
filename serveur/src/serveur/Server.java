@@ -7,11 +7,13 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 import common.Link;
 import common.Trame;
 import common.Trame_connect;
+import common.Trame_getClients;
 import common.Trame_message;
 import common.Trame_routage;
 
@@ -41,6 +43,20 @@ public class Server {
 	}
 		
 	public Server() {
+		
+		Inet4Address gateway;
+		try {
+		    gateway = (Inet4Address) InetAddress.getByName("127.0.0.1");
+		} catch (UnknownHostException e) {
+		    e.printStackTrace();
+		    return;
+		}
+		
+		serveurs.add(id);
+		passerelles.add(gateway);
+		clients_serveurs.add(new ArrayList<String>());
+		distance.add(0);
+		
 		runServer();
 	}
 	
@@ -63,9 +79,14 @@ public class Server {
 						Trame_connect trameConnect = (Trame_connect) received;
 						
 						if (routageClientTableLocal.get(trameConnect.getClient()) == null) { //si le client n'est pas déjà connecté
+							//ajout info routage
+							clients_serveurs.get(serveurs.indexOf(id)).add(trameConnect.getClient());
+							//création canal
 							ClientHandler c = new ClientHandler(link, this);
 							routageClientTableLocal.put(trameConnect.getClient(), c);
+							//approbation
 							trameConnect.setApproval(true);
+							//envoi de la réponse
 							c.sendTrame(trameConnect);
 							System.out.println("Client connecté: " + trameConnect.getClient());
 						}
@@ -100,15 +121,15 @@ public class Server {
 						
 					}
 					
+					//TRAME MESSAGE
 					if (received.getType_message() == 2) {
 						Trame_message trameMsg = (Trame_message) received;
 						routageNeighborTable.get(link.getSocket().getInetAddress()).serverMessageReceived(trameMsg);
 					}
+					//TRAME ROUTAGE
 					else if (received.getType_message() == 1) {
-						Trame_routage TrameRtg = (Trame_routage) received;
-						if(compareTableRoutage(TrameRtg)){
-							/////////////////////////////////////////////////////
-						}
+						Trame_routage trameRtg = (Trame_routage) received;
+						routageNeighborTable.get(link.getSocket().getInetAddress()).serverRoutageReceived(trameRtg);
 					}
 				}
 				
@@ -121,6 +142,7 @@ public class Server {
 		}
 	}
 	
+	//MESSAGE
 	//envoie un message à un client local
 	public void sendTrameMessageLocally(Trame_message t) {
 		if(routageClientTableLocal.get(t.getClient_cible()) != null) {
@@ -132,8 +154,8 @@ public class Server {
 		}
 	}
 	
-	//redirige un paquet vers un autre serveur
-	public void sendTrameMessageExternaly(Trame_message t) {
+	//envoie un paquet vers un autre serveur
+	public void sendTrameExternaly(Trame t) {
 		if(searchServer(t.getServeur_cible()) != -1) { //Si le serveur est connu
 			if(routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))) != null) { //si le canal de communication existe
 				routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).sendTrame(t);
@@ -155,11 +177,94 @@ public class Server {
 			System.out.println("Transmission impossible : Serveur cible inconnu");
 		}
 	}
-
-	//Compare la table de routage partagée à la locale, si elles sont identiques, return true, sinon false
-	private boolean compareTableRoutage(Trame_routage trame){
-		///////////////////////////////////////////////////////////////////////
+	
+	//ROUTAGE
+	//Compare la table de routage partagée à la locale, si elles ont les mêmes clients associés aux mêmes serveurs, return true, sinon false
+	public boolean compareTableRoutage(Trame_routage trame){
+		
+		//comparaison taille des tableaux
+		if((trame.getServeurs().size() != this.serveurs.size())
+			|| (trame.getClients_serveurs().size() != this.clients_serveurs.size())
+			|| (trame.getPasserelles().size() != this.passerelles.size())
+			|| (trame.getDistance().size() != this.distance.size())) {
+			return false;
+		}
+		
+		//comparaison contenu tableau
+		for(String nom : trame.getServeurs()) {
+			
+			if(!this.serveurs.contains(nom)) {
+				return false;
+			}
+			
+			int indexIn = this.serveurs.indexOf(nom); 		//index du côté local
+			int indexOut = trame.getServeurs().indexOf(nom);//index du côté du serveur qui nous envoie
+			
+			//vérification mêmes clients pour chaque serveur
+			for(int client = 0; client < trame.getClients_serveurs().get(indexOut).size(); client++) {
+				if(trame.getClients_serveurs().get(indexOut).get(client).compareTo(this.clients_serveurs.get(indexIn).get(client)) != 0) {
+					return false;
+				}
+			}
+			
+		}
 		return true;
+	}
+	
+	//met à jour la table de routage
+	public void updateTableRoutage(Trame_routage trame, Inet4Address gateway) {
+		
+		for(String nom : trame.getServeurs()) {
+			
+			int indexOut = trame.getServeurs().indexOf(nom);//index du côté du serveur qui nous envoie
+			
+			//Si ce serveur n'est pas connu en local 
+			if(!this.serveurs.contains(nom)) {
+				
+				this.serveurs.add(nom);
+				this.clients_serveurs.add(trame.getClients_serveurs().get(indexOut));
+				this.distance.add(trame.getDistance().get(indexOut) + 1);
+				this.passerelles.add(gateway);
+				
+			}
+			//si ce server est connu
+			else {
+				
+				int indexIn = this.serveurs.indexOf(nom); //index du côté local
+				
+				this.clients_serveurs.set(indexIn, trame.getClients_serveurs().get(indexOut));
+				this.distance.set(indexIn, trame.getDistance().get(indexOut) + 1);
+				this.passerelles.set(indexIn, gateway);
+				
+			}
+			
+		}
+		
+	}
+	
+	//envoie une trame routage au serveur donné
+	public void sendTrameRoutage(String server_Source) {
+		sendTrameExternaly(new Trame_routage(server_Source,this.id,this.serveurs, this.passerelles, this.clients_serveurs, this.distance));
+	}
+	
+	//GETLISTCLIENT
+	public void sendClientList(Trame_getClients trame) {
+		//si le client existe
+		if(routageClientTableLocal.get(trame.getClient_source()) != null) {
+			//construction trame
+			for(int i = 0; i < this.clients_serveurs.size(); i++) {
+				for(int j = 0; j < this.clients_serveurs.get(i).size(); j++) {
+					trame.getListCli().add(this.clients_serveurs.get(i).get(j));
+				}
+			}
+			
+			//envoi
+			routageClientTableLocal.get(trame.getClient_source()).sendTrame(trame);
+			System.out.println("Transmit to " + trame.getClient_source());
+		}
+		else {
+			System.out.println("Transmission impossible : le client local n'existe pas.");
+		}
 	}
 	
 	//renvoie l'index du nom d'un serveur du tableau serveurs, -1 si aucune occurence
@@ -167,9 +272,16 @@ public class Server {
 		return this.serveurs.indexOf(server);
 	}
 	
-	//renvoie l'index de l'adresse IP d'un serveur du tableau passerelles, -1 si aucune occurence
-	private int searchGateway(Inet4Address ip) {
-		return this.passerelles.indexOf(ip);
+	//renvoie le nom du server auquel le client est rattaché, null sinon
+	public String searchServerOfClient(String client) {
+		for(int index_server = 0; index_server < this.serveurs.size(); index_server++) {
+			for(int index_client = 0; index_client < this.clients_serveurs.get(index_server).size(); index_client++) {
+				if(this.clients_serveurs.get(index_server).get(index_client).compareTo(client) == 0) {
+					return this.serveurs.get(index_server);
+				}
+			}
+		}
+		return null;
 	}
 	
 	public static void main(String[] args) {

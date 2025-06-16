@@ -11,8 +11,12 @@ public class Trame_routage extends Trame{
 	private ArrayList<ArrayList<String>> clients_serveurs;	
 	private ArrayList<Integer> distance;
 	
-	Trame_routage(String serveur_cible,
-			String serveur_source, ArrayList<String> serveurs, ArrayList<Inet4Address> passerelles, ArrayList<ArrayList<String>> clients_serveurs, ArrayList<Integer> distance) {
+	public Trame_routage(String serveur_cible,
+				  String serveur_source,
+				  ArrayList<String> serveurs,
+				  ArrayList<Inet4Address> passerelles,
+				  ArrayList<ArrayList<String>> clients_serveurs,
+				  ArrayList<Integer> distance) {
 		
 		super(1, serveur_cible, serveur_source);
 		this.setServeurs(serveurs);

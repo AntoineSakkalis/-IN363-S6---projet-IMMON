@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import common.Link;
 import common.Trame;
+import common.Trame_getClients;
 import common.Trame_message;
 
 public class ClientHandler {
@@ -24,7 +25,12 @@ public class ClientHandler {
 						// Si c'est bien un message
 						if (trame.getType_message() == 2) {
 							clientMessageReceived((Trame_message) trame);
-						} else {
+						}
+						//trame getClients
+						else if (trame.getType_message() == 4) {
+							clientGetClientsReceived((Trame_getClients) trame);
+						}
+						else {
 							throw new RuntimeException("Type de trame reçu non valide");
 						}
 					}
@@ -39,13 +45,28 @@ public class ClientHandler {
 	// traite les messages entrants
 	public void clientMessageReceived(Trame_message received) throws IOException {
 		System.out.println("Received Trame_message from " + received.getClient_source());
-		// Si le client est sur le serveur local
-		if (received.getServeur_cible().compareTo(this.serverAttached.id) == 0) {
-			serverAttached.sendTrameMessageLocally(received);
+		//ajout du serveur cible si trouvé, sinon le message n'est pas transmis
+		if(serverAttached.searchServerOfClient(received.getClient_cible()) == null) {
+		
+			received.setServeur_cible(serverAttached.searchServerOfClient(received.getClient_cible()));
+		
+			// Si le client est sur le serveur local
+			if (received.getServeur_cible().compareTo(this.serverAttached.id) == 0) {
+				serverAttached.sendTrameMessageLocally(received);
+			}
+			else {
+				serverAttached.sendTrameExternaly(received);
+			}
+		
 		}
 		else {
-			serverAttached.sendTrameMessageExternaly(received);
+			System.out.println("Erreur : Le client cible choisi n'est pas connu");
 		}
+	}
+	
+	//traite les demandes de récupération de la liste de clients du réseau
+	public void clientGetClientsReceived(Trame_getClients trame) {
+		serverAttached.sendClientList(trame);
 	}
 	
 	public Link getLink() {

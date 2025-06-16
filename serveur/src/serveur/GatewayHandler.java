@@ -1,10 +1,12 @@
 package serveur;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 
 import common.Link;
 import common.Trame;
 import common.Trame_message;
+import common.Trame_routage;
 
 public class GatewayHandler {
 
@@ -24,6 +26,9 @@ public class GatewayHandler {
 						// Si c'est un message
 						if (trame.getType_message() == 2) {
 							serverMessageReceived((Trame_message) trame);
+						}
+						else if (trame.getType_message() == 1) {
+							serverRoutageReceived((Trame_routage) trame);
 						} else {
 							throw new RuntimeException("Type de trame reçu non valide");
 						}
@@ -44,7 +49,20 @@ public class GatewayHandler {
 			serverAttached.sendTrameMessageLocally(received);
 		}
 		else {
-			serverAttached.sendTrameMessageExternaly(received);
+			serverAttached.sendTrameExternaly(received);
+		}
+	}
+	
+	//traite les trames routages entrantes
+	public void serverRoutageReceived(Trame_routage received) {
+		//update si nécessaire
+		if(!serverAttached.compareTableRoutage(received)){
+			//maj
+			serverAttached.updateTableRoutage(received, (Inet4Address) link.getSocket().getInetAddress());
+			//si la table local à plus d'entrée que celle reçue, envoi de la table la plus à jour (la nôtre)
+			if(!serverAttached.compareTableRoutage(received)){
+				serverAttached.sendTrameRoutage(received.getServeur_source());
+			}
 		}
 	}
 

@@ -20,7 +20,7 @@ public class Trame_getClients extends Trame {
     public ArrayList<String> getListCli() {
         return listCli;
     }
-
+    
     public void setDu(ArrayList<String> listCli) {
         this.listCli = listCli;
     }
