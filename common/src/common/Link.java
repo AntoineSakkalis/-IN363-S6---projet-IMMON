@@ -23,8 +23,8 @@ public class Link implements AutoCloseable {
 		this.in = new ObjectInputStream(socket.getInputStream());
 	}
 
-	public void send(Trame message) throws IOException {
-		out.writeObject(message);
+	public void send(Trame trame) throws IOException {
+		out.writeObject(trame);
 		out.flush();
 	}
 

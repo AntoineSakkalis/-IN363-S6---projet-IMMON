@@ -49,16 +49,16 @@ public class Client {
 
     public void runClient() {
         try {
-            link = new Link(ipGateway, port);
+            this.link = new Link(ipGateway, port);
 
             // Connect to server
             Trame_connect connect = new Trame_connect(serverToConnect, serverToConnect, name, false);
-            link.send(connect);
+            this.link.send(connect);
             connect = (Trame_connect) link.receive();
 
             if (!connect.isApproval()) {
                 System.out.println("Connexion au serveur impossible");
-                link.close();
+                this.link.close();
                 return;
             }
             System.out.println("Serveur connecté !");

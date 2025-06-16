@@ -6,7 +6,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import client.Client;
+//import client.Client;
 import serveur.Server;
 
 public class ServerTest {
@@ -29,39 +29,62 @@ public class ServerTest {
 		new Thread(() -> {
 		    new Server("S01",
 		        9081,
-		        new ArrayList<String>(Arrays.asList("S01", "S02")),
-		        new ArrayList<Inet4Address>(Arrays.asList(addIP, addIP)),
+		        new ArrayList<String>(Arrays.asList("S01")),
+		        new ArrayList<Inet4Address>(Arrays.asList(addIP)),
 		        new ArrayList<ArrayList<String>>(Arrays.asList(
-		            new ArrayList<String>(Arrays.asList("C1")),
-		            new ArrayList<String>(Arrays.asList("C1"))
+	        		new ArrayList<String>()
 		        )),
-		        new ArrayList<Integer>(Arrays.asList(1, 1)),
-		        new ArrayList<Integer>(Arrays.asList(9081, 9082))
+		        new ArrayList<Integer>(Arrays.asList(0))
 		    );
 		}).start();
 
+		try {
+		    Thread.sleep(3000);
+		} catch (InterruptedException e) {
+		    e.printStackTrace();
+		}
+		
 		//création du server 2
 		new Thread(() -> {
 		    new Server("S02",
 		        9082,
-		        new ArrayList<String>(Arrays.asList("S01", "S02")),
+		        new ArrayList<String>(Arrays.asList("S02", "S01")),
 		        new ArrayList<Inet4Address>(Arrays.asList(addIP, addIP)),
 		        new ArrayList<ArrayList<String>>(Arrays.asList(
-		            new ArrayList<String>(Arrays.asList("C1")),
-		            new ArrayList<String>(Arrays.asList("C1"))
+		        	new ArrayList<String>(),
+		        	new ArrayList<String>()
 		        )),
-		        new ArrayList<Integer>(Arrays.asList(1, 1)),
-		        new ArrayList<Integer>(Arrays.asList(9081, 9082))
+		        new ArrayList<Integer>(Arrays.asList(0, 1))
 		    );
 		}).start();
-			
+		
+		try {
+		    Thread.sleep(3000);
+		} catch (InterruptedException e) {
+		    e.printStackTrace();
+		}
+		
+		//création du server 3
 		new Thread(() -> {
-		    new Client("C1", 9081, "S01", addIP, 0); // Client récepteur
+		    new Server("S03",
+		        9083,
+		        new ArrayList<String>(Arrays.asList("S03", "S01")),
+		        new ArrayList<Inet4Address>(Arrays.asList(addIP, addIP)),
+		        new ArrayList<ArrayList<String>>(Arrays.asList(
+		        	new ArrayList<String>(),
+		        	new ArrayList<String>()
+		        )),
+		        new ArrayList<Integer>(Arrays.asList(0, 1))
+		    );
 		}).start();
-
-		new Thread(() -> {
-		    new Client("C2", 9082, "S02", addIP, 1); // Client émetteur (envoyer à C1)
-		}).start();
+		
+//		new Thread(() -> {
+//		    new Client("C1", 9081, "S01", addIP, 0); // Client récepteur
+//		}).start();
+//
+//		new Thread(() -> {
+//		    new Client("C2", 9082, "S02", addIP, 1); // Client émetteur (envoyer à C1)
+//		}).start();
 		
 	}
 }

@@ -27,18 +27,16 @@ public class Server {
 	private ArrayList<Inet4Address> passerelles = new ArrayList<Inet4Address>();
 	private ArrayList<ArrayList<String>> clients_serveurs = new ArrayList<ArrayList<String>>();	
 	private ArrayList<Integer> distance = new ArrayList<Integer>();
-	private ArrayList<Integer> ports = new ArrayList<Integer>(); //dispensable, utile pour lancer 2 server sur son pc
 	
-	private int port = 9081;
+	private int port = 9082;
 
-	public Server(String id, int port, ArrayList<String> serveurs, ArrayList<Inet4Address> passerelles, ArrayList<ArrayList<String>> clients_serveurs, ArrayList<Integer> distance, ArrayList<Integer> ports) {
+	public Server(String id, int port, ArrayList<String> serveurs, ArrayList<Inet4Address> passerelles, ArrayList<ArrayList<String>> clients_serveurs, ArrayList<Integer> distance) {
 		this.id = id;
 		this.port = port;
 		this.serveurs = serveurs;
 		this.passerelles = passerelles;
 		this.clients_serveurs = clients_serveurs;
 		this.distance = distance;
-		this.ports = ports;
 		runServer();
 	}
 		
@@ -46,7 +44,7 @@ public class Server {
 		
 		Inet4Address gateway;
 		try {
-		    gateway = (Inet4Address) InetAddress.getByName("192.168.127.183");
+		    gateway = (Inet4Address) InetAddress.getByName("127.0.0.1");
 		} catch (UnknownHostException e) {
 		    e.printStackTrace();
 		    return;
@@ -62,13 +60,25 @@ public class Server {
 	
 	private void runServer() {
 		try (ServerSocket serverSocket = new ServerSocket(port)) {
-			System.out.println("Server listening on port " + port);
+			System.out.println(this.id +": Server listening on port " + port);
 
+			//connexion avec d'autres serveurs s'il ne se connaît pas que lui même
+			if(this.serveurs.size() > 1) {
+				for(int i = 1; i<this.serveurs.size(); i++) {
+					//création canal
+					Link canal = new Link(this.passerelles.get(i), this.port);
+					GatewayHandler g = new GatewayHandler(canal, this);
+					routageNeighborTable.put((Inet4Address) canal.getSocket().getInetAddress(), g);
+					//envoi table de routage
+					sendTrameRoutage(this.serveurs.get(i));
+				}
+			}
+			
 			while (true) {
 
 				Socket socket = serverSocket.accept();
 				Link link = new Link(socket);
-
+				
 				// lecture 1er message
 				Trame received = link.receive();
 
@@ -88,21 +98,23 @@ public class Server {
 							trameConnect.setApproval(true);
 							//envoi de la réponse
 							c.sendTrame(trameConnect);
-							System.out.println("Client connecté: " + trameConnect.getClient());
+							System.out.println(this.id +": Client connecté: " + trameConnect.getClient());
+							//informer les autres servers
+							broadCastTableRoutage();
 						}
 						else {
 							routageClientTableLocal.get(trameConnect.getClient()).sendTrame(trameConnect); //renvoie un nope
-							System.out.println("Erreur de connexion client : Vous ne pouvez pas connecter 2 fois le même client au serveur.");
+							System.out.println(this.id +": Erreur de connexion client : Vous ne pouvez pas connecter 2 fois le même client au serveur.");
 						}
 					}
 					else {
-						System.out.println("Erreur de connexion cliente : la trame n'est pas de type Trame_connect, Il faut d'abord établir une connexion (Trame de type 3) avant d'envoyer d'autres paquets");
+						System.out.println(this.id +": Erreur de connexion cliente : la trame n'est pas de type Trame_connect, Il faut d'abord établir une connexion (Trame de type 3) avant d'envoyer d'autres paquets");
 					}
 				}
 				
 				// serveur
 				else {
-					System.out.println("Serveur connecté : " + link.getSocket().getInetAddress());
+					System.out.println(this.id +": Serveur connecté : " + received.getServeur_source());
 					//ajout si nouveau chemin
 					if(routageNeighborTable.get(link.getSocket().getInetAddress()) == null) {
 						
@@ -111,70 +123,60 @@ public class Server {
 						
 					}
 					
-					//ajout si nouveau serveur
-					if (searchServer(received.getServeur_source()) == -1) {
-						
-						this.serveurs.add(received.getServeur_source()); 						//nom du serveur source
-						this.clients_serveurs.add(null); 										//pas d'information pour l'instant
-						this.passerelles.add((Inet4Address) link.getSocket().getInetAddress()); //par où il est passé pour arriver
-						this.distance.add(null);												//pas d'information pour l'instant
-						
-					}
-					
-					//TRAME MESSAGE
-					if (received.getType_message() == 2) {
-						Trame_message trameMsg = (Trame_message) received;
-						routageNeighborTable.get(link.getSocket().getInetAddress()).serverMessageReceived(trameMsg);
-					}
-					//TRAME ROUTAGE
-					else if (received.getType_message() == 1) {
+					//Si bien une trame routage
+					if (received.getType_message() == 1) {
 						Trame_routage trameRtg = (Trame_routage) received;
 						routageNeighborTable.get(link.getSocket().getInetAddress()).serverRoutageReceived(trameRtg);
 					}
+					else {
+						System.out.println(this.id +": Erreur de connexion serveur : Tentative d'envoi une Trame_message avant connexion avec Trame_routage.");
+						sendTrameRoutage(received.getServeur_source());
+					}
+					
 				}
 				
 			}
 
 		}
 		catch(IOException e){
-			System.err.println("Could not start server: " + e.getMessage());
+			System.err.println(this.id +": Could not start server: " + e.getMessage());
 			e.printStackTrace();
 		}
 	}
+	
+	//envoie un paquet vers un autre serveur
+		public void sendTrameExternaly(Trame t) {
+			if(searchServer(t.getServeur_cible()) != -1) { //Si le serveur est connu
+				if(routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))) != null) { //si le canal de communication existe
+					routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).sendTrame(t);
+					System.out.println(this.id +": Trame transmit to " + routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).getLink().getSocket().getInetAddress().toString() + ":" +routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).getLink().getSocket().getPort() + " : " + t.getServeur_source() + "->" + t.getServeur_cible());
+				}
+				else {
+					try { //on essaie de le créer et de l'envoyer avec les informations qu'on a
+						GatewayHandler g = new GatewayHandler(new Link(passerelles.get(searchServer(t.getServeur_cible())), this.port), null);
+						routageNeighborTable.put((Inet4Address) passerelles.get(searchServer(t.getServeur_cible())), g);
+						routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).sendTrame(t);
+						System.out.println(this.id +": Trame transmit to " + routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).getLink().getSocket().getInetAddress().toString());
+					} catch (IOException e) {
+						System.out.println(e);
+						System.out.println(this.id +": Transmission impossible : Le canal de communication n'existe pas et n'est pas constructible");
+					}
+				}
+			}
+			else {
+				System.out.println(this.id +": Transmission impossible : Serveur cible inconnu");
+			}
+		}
 	
 	//MESSAGE
 	//envoie un message à un client local
 	public void sendTrameMessageLocally(Trame_message t) {
 		if(routageClientTableLocal.get(t.getClient_cible()) != null) {
 			routageClientTableLocal.get(t.getClient_cible()).sendTrame(t);
-			System.out.println("Transmit to " + t.getClient_cible());
+			System.out.println(this.id +": Trame_message envoyé à " + t.getClient_cible());
 		}
 		else {
-			System.out.println("Transmission impossible : le client local n'existe pas.");
-		}
-	}
-	
-	//envoie un paquet vers un autre serveur
-	public void sendTrameExternaly(Trame t) {
-		if(searchServer(t.getServeur_cible()) != -1) { //Si le serveur est connu
-			if(routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))) != null) { //si le canal de communication existe
-				routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).sendTrame(t);
-				System.out.println("Transmit to " + routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).getLink().getSocket().getInetAddress().toString());
-			}
-			else {
-				try { //on essaie de le créer et de l'envoyer avec les informations qu'on a
-					GatewayHandler g = new GatewayHandler(new Link(passerelles.get(searchServer(t.getServeur_cible())), ports.get(searchServer(t.getServeur_cible()))), this);
-					routageNeighborTable.put((Inet4Address) passerelles.get(searchServer(t.getServeur_cible())), g);
-					routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).sendTrame(t);
-					System.out.println("Transmit to " + routageNeighborTable.get(this.passerelles.get(searchServer(t.getServeur_cible()))).getLink().getSocket().getInetAddress().toString());
-				} catch (IOException e) {
-					System.out.println(e);
-					System.out.println("Transmission impossible : Le canal de communication n'existe pas et n'est pas constructible");
-				}
-			}
-		}
-		else {
-			System.out.println("Transmission impossible : Serveur cible inconnu");
+			System.out.println(this.id +": Transmission impossible : le client local n'existe pas.");
 		}
 	}
 	
@@ -183,10 +185,7 @@ public class Server {
 	public boolean compareTableRoutage(Trame_routage trame){
 		
 		//comparaison taille des tableaux
-		if((trame.getServeurs().size() != this.serveurs.size())
-			|| (trame.getClients_serveurs().size() != this.clients_serveurs.size())
-			|| (trame.getPasserelles().size() != this.passerelles.size())
-			|| (trame.getDistance().size() != this.distance.size())) {
+		if((trame.getServeurs().size() != this.serveurs.size())) {
 			return false;
 		}
 		
@@ -227,6 +226,10 @@ public class Server {
 				this.passerelles.add(gateway);
 				
 			}
+			//si ce n'est pas lui-même
+			else if(nom.compareTo(this.id) == 0){
+				continue;
+			}
 			//si ce server est connu
 			else {
 				
@@ -243,8 +246,28 @@ public class Server {
 	}
 	
 	//envoie une trame routage au serveur donné
-	public void sendTrameRoutage(String server_Source) {
-		sendTrameExternaly(new Trame_routage(server_Source,this.id,this.serveurs, this.passerelles, this.clients_serveurs, this.distance));
+	public void sendTrameRoutage(String server) {
+		//Création de copie pour s'assurer d'avoir les données à jour
+		ArrayList<String> serveursCopy = new ArrayList<>(this.serveurs);
+	    ArrayList<Inet4Address> passerellesCopy = new ArrayList<>(this.passerelles);
+	    ArrayList<Integer> distanceCopy = new ArrayList<>(this.distance);
+	    
+	    ArrayList<ArrayList<String>> clientsCopy = new ArrayList<>();
+	    for (ArrayList<String> clientList : this.clients_serveurs) {
+	        clientsCopy.add(new ArrayList<>(clientList));
+	    }
+		
+		sendTrameExternaly(new Trame_routage(server,this.id, serveursCopy, passerellesCopy, clientsCopy, distanceCopy));
+		System.out.println(this.id +": Table de routage envoyée à " + server);
+	}
+	
+	public void broadCastTableRoutage() {
+		//S'il connaît d'autres servers que lui-même
+		if(this.serveurs.size() > 1) {
+			for(int i = 1; i<this.serveurs.size(); i++) {
+				sendTrameRoutage(this.serveurs.get(i));
+			}
+		}
 	}
 	
 	//GETLISTCLIENT
@@ -260,10 +283,10 @@ public class Server {
 			
 			//envoi
 			routageClientTableLocal.get(trame.getClient_source()).sendTrame(trame);
-			System.out.println("Transmit to " + trame.getClient_source());
+			System.out.println(this.id +": Liste des clients du réseau envoyé à " + trame.getClient_source());
 		}
 		else {
-			System.out.println("Transmission impossible : le client local n'existe pas.");
+			System.out.println(this.id +": Transmission impossible : le client local n'existe pas.");
 		}
 	}
 	
@@ -282,6 +305,16 @@ public class Server {
 			}
 		}
 		return null;
+	}
+	
+	//print la table de routage du server
+	public void printTableRoutage() {
+		for(int i = 0; i < this.serveurs.size(); i++) {
+			System.out.println("Server : " + this.serveurs.get(i));
+			System.out.println("\tPasserelle :" + this.passerelles.get(i));
+			System.out.println("\tClients Associés :" + this.clients_serveurs.get(i));
+			System.out.println("\tDistance :" + this.distance.get(i));
+		}
 	}
 	
 	public static void main(String[] args) {
