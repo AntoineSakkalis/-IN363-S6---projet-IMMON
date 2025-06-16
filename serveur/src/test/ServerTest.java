@@ -48,7 +48,7 @@ public class ServerTest {
 		        new ArrayList<Inet4Address>(Arrays.asList(addIP, addIP)),
 		        new ArrayList<ArrayList<String>>(Arrays.asList(
 		            new ArrayList<String>(Arrays.asList("C1")),
-		            new ArrayList<String>(Arrays.asList("C1"))
+		            new ArrayList<String>(Arrays.asList("C2"))
 		        )),
 		        new ArrayList<Integer>(Arrays.asList(1, 1)),
 		        new ArrayList<Integer>(Arrays.asList(9081, 9082))

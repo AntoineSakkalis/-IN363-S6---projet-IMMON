@@ -1,41 +1,27 @@
 package common;
 
-public class Trame_getClients extends Trame{
-	
-	private String client_cible;
-	private String client_source;
-	private String du;
-	
-	public Trame_getClients(int type_message, String serveur_cible, String serveur_source, String client_cible, String client_source, String du) {
-		super(type_message, serveur_cible, serveur_source);
-		this.setClient_cible(client_cible);
-		this.setClient_source(client_source);
-		this.setDu(du);
-	}
+import java.util.ArrayList;
 
-	public String getClient_cible() {
-		return client_cible;
-	}
+public class Trame_getClients extends Trame {
 
-	public void setClient_cible(String client_cible) {
-		this.client_cible = client_cible;
-	}
+    private String client_source;
+    private ArrayList<String> listCli;  // list of clients
 
-	public String getClient_source() {
-		return client_source;
-	}
+    public Trame_getClients(String serveur_cible, String serveur_source, String client_source, ArrayList<String> listCli) {
+        super(4, serveur_cible, serveur_source);
+        this.client_source = client_source;
+        this.listCli = listCli;
+    }
 
-	public void setClient_source(String client_source) {
-		this.client_source = client_source;
-	}
+    public String getClient_source() {
+        return client_source;
+    }
 
-	public String getDu() {
-		return du;
-	}
+    public ArrayList<String> getListCli() {
+        return listCli;
+    }
 
-	public void setDu(String du) {
-		this.du = du;
-	}
-	
-	
+    public void setDu(ArrayList<String> listCli) {
+        this.listCli = listCli;
+    }
 }

@@ -17,7 +17,7 @@ import common.Trame_routage;
 
 public class Server {
 
-	public String id = "S02";
+	public String id = "S01";
 	private HashMap<String, ClientHandler> routageClientTableLocal = new HashMap<>(); // NomDuClient,ObjetEnChargeCanal
 	private HashMap<Inet4Address, GatewayHandler> routageNeighborTable = new HashMap<>(); //AdresseIPPasserelle,ObjetEnChargeCanal
 	
@@ -27,7 +27,7 @@ public class Server {
 	private ArrayList<Integer> distance = new ArrayList<Integer>();
 	private ArrayList<Integer> ports = new ArrayList<Integer>(); //dispensable, utile pour lancer 2 server sur son pc
 	
-	private int port = 9082;
+	private int port = 9081;
 
 	public Server(String id, int port, ArrayList<String> serveurs, ArrayList<Inet4Address> passerelles, ArrayList<ArrayList<String>> clients_serveurs, ArrayList<Integer> distance, ArrayList<Integer> ports) {
 		this.id = id;
