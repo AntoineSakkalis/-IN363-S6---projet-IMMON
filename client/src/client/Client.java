@@ -37,8 +37,13 @@ public class Client {
     	System.out.println("Choisissez votre nom sur le réseau");
     	this.name = scanner.nextLine();
     	
+    	System.out.println("Choisissez votre serveur");
+    	this.serverToConnect = scanner.nextLine();   	
+    	
+    	System.out.println("Saisissez l'adresse IP de ce serveur");
+    	
         try {
-            ipGateway = (Inet4Address) InetAddress.getByName("127.0.0.1");
+            this.ipGateway = (Inet4Address) InetAddress.getByName(scanner.nextLine());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }

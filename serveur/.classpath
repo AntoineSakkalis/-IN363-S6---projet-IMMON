@@ -8,6 +8,5 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5"/>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/common"/>
-	<classpathentry kind="lib" path="clientTemp.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

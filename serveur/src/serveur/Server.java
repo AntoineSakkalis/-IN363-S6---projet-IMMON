@@ -19,7 +19,7 @@ import common.Trame_routage;
 
 public class Server {
 
-	public String id = "S01";
+	public String id = "S02";
 	private HashMap<String, ClientHandler> routageClientTableLocal = new HashMap<>(); // NomDuClient,ObjetEnChargeCanal
 	private HashMap<Inet4Address, GatewayHandler> routageNeighborTable = new HashMap<>(); //AdresseIPPasserelle,ObjetEnChargeCanal
 	
@@ -28,7 +28,7 @@ public class Server {
 	private ArrayList<ArrayList<String>> clients_serveurs = new ArrayList<ArrayList<String>>();	
 	private ArrayList<Integer> distance = new ArrayList<Integer>();
 	
-	private int port = 9082;
+	private int port = 9081;
 
 	public Server(String id, int port, ArrayList<String> serveurs, ArrayList<Inet4Address> passerelles, ArrayList<ArrayList<String>> clients_serveurs, ArrayList<Integer> distance) {
 		this.id = id;
@@ -54,6 +54,18 @@ public class Server {
 		passerelles.add(gateway);
 		clients_serveurs.add(new ArrayList<String>());
 		distance.add(0);
+		
+		try {
+		    gateway = (Inet4Address) InetAddress.getByName("192.168.127.218");
+		} catch (UnknownHostException e) {
+		    e.printStackTrace();
+		    return;
+		}
+		
+		serveurs.add("S01");
+		passerelles.add(gateway);
+		clients_serveurs.add(new ArrayList<String>());
+		distance.add(1);
 		
 		runServer();
 	}
@@ -198,6 +210,10 @@ public class Server {
 			
 			int indexIn = this.serveurs.indexOf(nom); 		//index du côté local
 			int indexOut = trame.getServeurs().indexOf(nom);//index du côté du serveur qui nous envoie
+			
+			if(trame.getClients_serveurs().get(indexOut).size() != this.clients_serveurs.get(indexIn).size()) {
+				return false;
+			}
 			
 			//vérification mêmes clients pour chaque serveur
 			for(int client = 0; client < trame.getClients_serveurs().get(indexOut).size(); client++) {
