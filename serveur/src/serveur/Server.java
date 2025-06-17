@@ -56,7 +56,7 @@ public class Server {
 		distance.add(0);
 		
 		try {
-		    gateway = (Inet4Address) InetAddress.getByName("192.168.127.218");
+		    gateway = (Inet4Address) InetAddress.getByName("192.168.61.252");
 		} catch (UnknownHostException e) {
 		    e.printStackTrace();
 		    return;
@@ -252,8 +252,6 @@ public class Server {
 				int indexIn = this.serveurs.indexOf(nom); //index du côté local
 				
 				this.clients_serveurs.set(indexIn, trame.getClients_serveurs().get(indexOut));
-				this.distance.set(indexIn, trame.getDistance().get(indexOut) + 1);
-				this.passerelles.set(indexIn, gateway);
 				
 			}
 			
